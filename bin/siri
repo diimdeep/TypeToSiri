@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# "Type To Siri" is a feature in which you can activate a Siri prompt and type in text to ask Siri
+# First you must enable "Type To Siri" in System Preferences / Accessibility / Siri / "Enable Type To Siri"
+# Make sure "Show Siri in menu bar" enabled
+# Enable accessibility for the app this script invoked from.
+
+# read -r -d '' APPLE_SCRIPT << EOF
+# on run argv
+#    return "hello, " & item 1 of argv & "."
+# end run
+# EOF
+# echo "$APPLE_SCRIPT"
+
+APPLE_SCRIPT=$(cat << EOF
+on run argv
+set argList to {}
+repeat with arg in argv
+    set end of argList to arg & space
+end repeat
+set theQuery to argList as string
+
+tell application "System Events" to tell the front menu bar of process "SystemUIServer"
+    tell (first menu bar item whose description is "Siri")
+        perform action "AXPress"
+    end tell
+end tell
+
+delay 0.3
+
+activate application "NotificationCenter"
+tell application "System Events"
+    tell process "NotificationCenter"
+        set notifyWindows to every window
+        repeat with notifyWindow in notifyWindows
+            if description of notifyWindow is "Siri" then
+                exit repeat
+            end if
+        end repeat
+        set textFields to every text field of notifyWindow
+        repeat with textField in textFields
+            if description of textField is "Type to Siri" then
+                exit repeat
+            end if
+        end repeat
+        tell textField
+            set focused to true
+            set value to theQuery
+            perform action "AXConfirm"
+        end tell
+    end tell
+end tell
+end run
+EOF
+)
+
+osascript -e "$APPLE_SCRIPT" "$@"
